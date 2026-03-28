@@ -20,16 +20,47 @@ jobs:
             matrix:
                 include:
                     - php-version: '7.2'
-                      lint: false
                       dependency-versions: 'lowest'
-                      tools: 'composer:v1'
+                      tools: 'composer:v2'
+                      phpunit-config: 'phpunit-9.xml.dist'
                       env:
                           SYMFONY_DEPRECATIONS_HELPER: disabled
 
                     - php-version: '7.4'
-                      lint: true
                       dependency-versions: 'highest'
                       tools: 'composer:v2'
+                      phpunit-config: 'phpunit-9.xml.dist'
+                      env:
+                          SYMFONY_DEPRECATIONS_HELPER: disabled
+
+                    - php-version: '8.0'
+                      dependency-versions: 'highest'
+                      tools: 'composer:v2'
+                      env:
+                          SYMFONY_DEPRECATIONS_HELPER: disabled
+
+                    - php-version: '8.1'
+                      dependency-versions: 'highest'
+                      tools: 'composer:v2'
+                      env:
+                          SYMFONY_DEPRECATIONS_HELPER: disabled
+
+                    - php-version: '8.2'
+                      dependency-versions: 'highest'
+                      tools: 'composer:v2'
+                      env:
+                          SYMFONY_DEPRECATIONS_HELPER: disabled
+
+                    - php-version: '8.3'
+                      dependency-versions: 'highest'
+                      tools: 'composer:v2'
+                      env:
+                          SYMFONY_DEPRECATIONS_HELPER: weak
+
+                    - php-version: '8.4'
+                      dependency-versions: 'highest'
+                      tools: 'composer:v2'
+                      composer-options: '--ignore-platform-reqs'
                       env:
                           SYMFONY_DEPRECATIONS_HELPER: weak
 
@@ -44,7 +75,7 @@ jobs:
 
         steps:
             - name: Checkout project
-              uses: actions/checkout@v2
+              uses: actions/checkout@v4
 
             - name: Install and configure PHP
               uses: shivammathur/setup-php@v2
@@ -53,20 +84,51 @@ jobs:
                   extensions: 'mysql, gd'
                   tools: ${{ matrix.tools }}
 
+            - name: Remove phpspec/prophecy-phpunit
+              if: ${{ matrix.php-version == '7.2' }}
+              run: composer remove phpspec/prophecy-phpunit --no-update --dev
+
+            - name: Remove Lint Tools
+              # These tools are not required to run tests, so we are removing them to improve dependency resolving and
+              # testing lowest versions.
+              run: composer remove "*php-cs-fixer*" "*phpstan*" "*rector*" --dev --no-update
+
             - name: Install composer dependencies
-              uses: ramsey/composer-install@v1
+              uses: ramsey/composer-install@v2
               with:
                   dependency-versions: ${{matrix.dependency-versions}}
+                  composer-options: ${{ matrix.composer-options }}
 
             - name: Bootstrap test environment
               run: composer bootstrap-test-environment
               env: ${{ matrix.env }}
 
-            - name: Lint code
-              if: ${{ matrix.lint }}
-              run: composer lint
+            - name: Execute test cases
+              run: composer test -- --config ${{ matrix.phpunit-config || 'phpunit.xml.dist' }}
               env: ${{ matrix.env }}
 
-            - name: Execute test cases
-              run: composer test
-              env: ${{ matrix.env }}
+    lint:
+        name: 'PHP Lint'
+        runs-on: ubuntu-latest
+
+        env:
+            DATABASE_URL: 'mysql://root:root@127.0.0.1/sulu_comment_test?serverVersion=5.7'
+
+        steps:
+            - name: Checkout project
+              uses: actions/checkout@v4
+
+            - name: Install and configure PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: 8.3
+                  extensions: 'mysql, gd'
+                  tools: 'composer:v2'
+
+            - name: Install composer dependencies
+              uses: ramsey/composer-install@v2
+              with:
+                  dependency-versions: 'highest'
+
+            - name: Lint code
+              run: composer lint

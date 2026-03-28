@@ -13,6 +13,9 @@ namespace Sulu\Bundle\CommentBundle\Entity;
 
 use Doctrine\ORM\EntityRepository;
 
+/**
+ * @extends EntityRepository<ThreadInterface>
+ */
 class ThreadRepository extends EntityRepository implements ThreadRepositoryInterface
 {
     public function createNew(string $type, string $entityId): ThreadInterface
@@ -43,6 +46,7 @@ class ThreadRepository extends EntityRepository implements ThreadRepositoryInter
             ->setParameter('ids', $ids)
             ->getQuery();
 
+        /** @var ThreadInterface[] */
         return $query->getResult();
     }
 

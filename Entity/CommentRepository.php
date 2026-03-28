@@ -14,6 +14,9 @@ namespace Sulu\Bundle\CommentBundle\Entity;
 use Doctrine\ORM\NoResultException;
 use Gedmo\Tree\Entity\Repository\NestedTreeRepository;
 
+/**
+ * @extends NestedTreeRepository<CommentInterface>
+ */
 class CommentRepository extends NestedTreeRepository implements CommentRepositoryInterface
 {
     public function findComments(string $type, string $entityId, int $limit = 10, int $offset = 0): array
@@ -36,7 +39,10 @@ class CommentRepository extends NestedTreeRepository implements CommentRepositor
             $query->setFirstResult($offset);
         }
 
-        return $query->getResult();
+        /** @var CommentInterface[] $result */
+        $result = $query->getResult();
+
+        return $result;
     }
 
     public function findPublishedComments(
@@ -67,7 +73,10 @@ class CommentRepository extends NestedTreeRepository implements CommentRepositor
             $query->setFirstResult($offset);
         }
 
-        return $query->getResult();
+        /** @var CommentInterface[] $result */
+        $result = $query->getResult();
+
+        return $result;
     }
 
     public function countPublishedComments(string $type, string $entityId): int
@@ -82,7 +91,10 @@ class CommentRepository extends NestedTreeRepository implements CommentRepositor
             ->setParameter('type', $type)
             ->setParameter('entityId', $entityId);
 
-        return $queryBuilder->getQuery()->getSingleScalarResult();
+        /** @var int $result */
+        $result = $queryBuilder->getQuery()->getSingleScalarResult();
+
+        return $result;
     }
 
     public function findCommentsByIds(array $ids): array
@@ -95,7 +107,10 @@ class CommentRepository extends NestedTreeRepository implements CommentRepositor
             ->setParameter('ids', $ids)
             ->getQuery();
 
-        return $query->getResult();
+        /** @var CommentInterface[] $result */
+        $result = $query->getResult();
+
+        return $result;
     }
 
     public function findCommentById(int $id): ?CommentInterface
@@ -109,7 +124,10 @@ class CommentRepository extends NestedTreeRepository implements CommentRepositor
             ->getQuery();
 
         try {
-            return $query->getSingleResult();
+            /** @var CommentInterface $result */
+            $result = $query->getSingleResult();
+
+            return $result;
         } catch (NoResultException $e) {
             return null;
         }
@@ -125,8 +143,9 @@ class CommentRepository extends NestedTreeRepository implements CommentRepositor
         $this->getEntityManager()->remove($comment);
     }
 
-    public function createNew()
+    public function createNew(): CommentInterface
     {
+        /** @var CommentInterface $className */
         $className = $this->getClassName();
 
         return new $className();

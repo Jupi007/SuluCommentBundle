@@ -13,6 +13,7 @@ namespace Sulu\Bundle\CommentBundle\Tests\Unit\Manager;
 
 use PHPUnit\Framework\TestCase;
 use Prophecy\Argument;
+use Prophecy\PhpUnit\ProphecyTrait;
 use Sulu\Bundle\CommentBundle\Entity\CommentInterface;
 use Sulu\Bundle\CommentBundle\Entity\CommentRepositoryInterface;
 use Sulu\Bundle\CommentBundle\Entity\ThreadInterface;
@@ -26,6 +27,8 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class CommentManagerTest extends TestCase
 {
+    use ProphecyTrait;
+
     /**
      * @var ThreadRepositoryInterface
      */
@@ -96,7 +99,7 @@ class CommentManagerTest extends TestCase
         $this->dispatcher->dispatch(Argument::type(CommentEvent::class), Events::PRE_PERSIST_EVENT)
             ->shouldBeCalledTimes(1)
             ->will(
-                function() use ($commentRepository, $comment, $dispatcher, $thread) {
+                function($args) use ($commentRepository, $comment, $dispatcher, $thread) {
                     $thread->addComment($comment->reveal())->willReturn($thread->reveal());
                     $commentRepository->persist($comment->reveal())
                         ->shouldBeCalledTimes(1)
@@ -108,6 +111,9 @@ class CommentManagerTest extends TestCase
                                 )->shouldBeCalledTimes(1);
                             }
                         );
+
+                    // return the event
+                    return $args[0];
                 }
             );
 
@@ -130,7 +136,7 @@ class CommentManagerTest extends TestCase
         $this->dispatcher->dispatch(Argument::type(CommentEvent::class), Events::PRE_PERSIST_EVENT)
             ->shouldBeCalledTimes(1)
             ->will(
-                function() use ($commentRepository, $comment, $dispatcher, $thread) {
+                function($args) use ($commentRepository, $comment, $dispatcher, $thread) {
                     $thread->addComment($comment->reveal())->willReturn($thread->reveal());
                     $commentRepository->persist($comment->reveal())
                         ->shouldBeCalledTimes(1)
@@ -142,6 +148,9 @@ class CommentManagerTest extends TestCase
                                 )->shouldBeCalledTimes(1);
                             }
                         );
+
+                    // return the event
+                    return $args[0];
                 }
             );
 
@@ -164,7 +173,8 @@ class CommentManagerTest extends TestCase
                 }
             ),
             Events::PRE_UPDATE_EVENT
-        )->shouldBeCalled();
+        )->shouldBeCalled()
+        ->willReturn(new CommentEvent('', '', $this->comment->reveal(), $this->thread->reveal()));
 
         $this->assertEquals($comment->reveal(), $this->commentManager->update($comment->reveal()));
         $this->commentEventCollector->dispatch(); // simulate flush of the comments
@@ -181,7 +191,8 @@ class CommentManagerTest extends TestCase
                 }
             ),
             Events::THREAD_PRE_UPDATE_EVENT
-        )->shouldBeCalled();
+        )->shouldBeCalled()
+        ->willReturn(new ThreadEvent($this->thread->reveal()));
 
         $this->assertEquals($thread->reveal(), $this->commentManager->updateThread($thread->reveal()));
         $this->commentEventCollector->dispatch(); // simulate flush of the comments
@@ -214,7 +225,7 @@ class CommentManagerTest extends TestCase
                 ),
                 Events::PRE_DELETE_EVENT
             )->will(
-                function() use ($comment, $dispatcher) {
+                function($args) use ($comment, $dispatcher) {
                     $dispatcher->dispatch(
                         Argument::that(
                             function(CommentEvent $event) use ($comment) {
@@ -223,6 +234,9 @@ class CommentManagerTest extends TestCase
                         ),
                         Events::POST_DELETE_EVENT
                     )->shouldBeCalledTimes(1);
+
+                    // return the event
+                    return $args[0];
                 }
             )->shouldBeCalledTimes(1);
 
@@ -260,7 +274,7 @@ class CommentManagerTest extends TestCase
                 ),
                 Events::PRE_DELETE_EVENT
             )->will(
-                function() use ($comment, $dispatcher) {
+                function($args) use ($comment, $dispatcher) {
                     $dispatcher->dispatch(
                         Argument::that(
                             function(CommentEvent $event) use ($comment) {
@@ -269,6 +283,9 @@ class CommentManagerTest extends TestCase
                         ),
                         Events::POST_DELETE_EVENT
                     )->shouldBeCalledTimes(1);
+
+                    // return the event
+                    return $args[0];
                 }
             )->shouldBeCalledTimes(1);
 
@@ -303,7 +320,7 @@ class CommentManagerTest extends TestCase
                 ),
                 Events::THREAD_PRE_DELETE_EVENT
             )->will(
-                function() use ($thread, $dispatcher) {
+                function($args) use ($thread, $dispatcher) {
                     $dispatcher->dispatch(
                         Argument::that(
                             function(ThreadEvent $event) use ($thread) {
@@ -312,6 +329,9 @@ class CommentManagerTest extends TestCase
                         ),
                         Events::THREAD_POST_DELETE_EVENT
                     )->shouldBeCalledTimes(1);
+
+                    // return the event
+                    return $args[0];
                 }
             )->shouldBeCalledTimes(1);
 
@@ -344,7 +364,7 @@ class CommentManagerTest extends TestCase
                 ),
                 Events::THREAD_PRE_DELETE_EVENT
             )->will(
-                function() use ($thread, $dispatcher) {
+                function($args) use ($thread, $dispatcher) {
                     $dispatcher->dispatch(
                         Argument::that(
                             function(ThreadEvent $event) use ($thread) {
@@ -353,6 +373,9 @@ class CommentManagerTest extends TestCase
                         ),
                         Events::THREAD_POST_DELETE_EVENT
                     )->shouldBeCalledTimes(1);
+
+                    // return the event
+                    return $args[0];
                 }
             )->shouldBeCalledTimes(1);
 
@@ -379,7 +402,8 @@ class CommentManagerTest extends TestCase
                 }
             ),
             Events::PUBLISH_EVENT
-        )->shouldBeCalledTimes(1);
+        )->shouldBeCalledTimes(1)
+        ->willReturn(new CommentEvent('', '', $this->comment->reveal(), $this->thread->reveal()));
 
         $this->assertEquals($this->comment->reveal(), $this->commentManager->publish($this->comment->reveal()));
         $this->commentEventCollector->dispatch(); // simulate flush of the comments
@@ -398,7 +422,8 @@ class CommentManagerTest extends TestCase
                 }
             ),
             Events::PUBLISH_EVENT
-        )->shouldNotBeCalled();
+        )->shouldNotBeCalled()
+        ->willReturn(new CommentEvent('', '', $this->comment->reveal(), $this->thread->reveal()));
 
         $this->assertEquals($this->comment->reveal(), $this->commentManager->publish($this->comment->reveal()));
         $this->commentEventCollector->dispatch(); // simulate flush of the comments
@@ -418,7 +443,8 @@ class CommentManagerTest extends TestCase
                 }
             ),
             Events::UNPUBLISH_EVENT
-        )->shouldBeCalledTimes(1);
+        )->shouldBeCalledTimes(1)
+        ->willReturn(new CommentEvent('', '', $this->comment->reveal(), $this->thread->reveal()));
 
         $this->assertEquals($this->comment->reveal(), $this->commentManager->unpublish($this->comment->reveal()));
         $this->commentEventCollector->dispatch(); // simulate flush of the comments
@@ -437,7 +463,8 @@ class CommentManagerTest extends TestCase
                 }
             ),
             Events::UNPUBLISH_EVENT
-        )->shouldNotBeCalled();
+        )->shouldNotBeCalled()
+        ->willReturn(new CommentEvent('', '', $this->comment->reveal(), $this->thread->reveal()));
 
         $this->assertEquals($this->comment->reveal(), $this->commentManager->unpublish($this->comment->reveal()));
         $this->commentEventCollector->dispatch(); // simulate flush of the comments
